@@ -1,0 +1,1816 @@
+---
+title: "WHO DHS Data set Dataset"
+output: html_document
+date: "2025-10-22"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## uploading Datasets: 
+
+
+```{r}
+library(haven)
+library(tidyverse)
+library(dplyr)
+library(data.table)
+library(haven)
+library(xtable)
+library(flextable)
+library(officer)
+library(tidyr)
+library(knitr)
+library(kableExtra)
+
+```
+
+
+
+```{r, eval = FALSE}
+#Importing data on Ghana 2008: 
+ghana_dhs <- read_dta("GHIR5ADT/GHIR5AFL.DTA")
+head(ghana_dhs)
+nrow(ghana_dhs) #Has 4916 observations
+dim(ghana_dhs)
+
+#Importing data on India 2005-2006. 
+india_dhs <- read_dta("IAIR52DT/IAIR52FL.dta")
+head(india_dhs)
+nrow(india_dhs)
+dim(india_dhs)
+
+#Importing data on Nigeria 2008 
+nigeria_dhs <- read_dta("NGIR53DT/NGIR53FL.DTA")
+head(nigeria_dhs)
+nrow(nigeria_dhs)
+dim(nigeria_dhs)
+```
+
+
+
+```{r}
+#Variables needed for the study: 
+cols_needed <- c(
+  #Identifiable variables
+  "caseid","v012","v020","v155","v156","v106","v107","v133",
+  "v149","v190","v191","v025","v024","v102","v137", "v044",
+  
+  #any emotional abuse my husband 
+  "d103b", 
+  #any Physical violence (less, and severe)
+  "d106", "d107", "d130a","d118y", "d115y",
+  
+  #any sexual violence
+  "d108", "d130b", "d124", "d125",
+  
+  #Reporting and disclosing GBV
+    "d128","d119y"
+)
+```
+
+```{r}
+#Importing Ghana DHS GBV Data 
+
+#Importing Ghana 2008
+ghana_2008 <- read_dta("GHIR5ADT/GHIR5AFL.DTA") %>% 
+  select(any_of(cols_needed), starts_with("d119")) %>%
+  mutate(Country = "Ghana", Year = 2008)
+
+#Not importing Ghana 2014 because GBV module 
+
+#Importing Ghana 2022
+ghana_2022 <- read_dta("GHIR8CDT-2022/GHIR8CFL.DTA") %>% 
+  select(any_of(cols_needed), starts_with("d119")) %>%
+  mutate(Country = "Ghana") %>% 
+  mutate(Year = 2022)
+```
+
+
+```{r}
+#Importing India DHS GBV Data 
+
+#Importing India data 2005-2006
+india_2005 <- read_dta("IAIR52DT/IAIR52FL.dta")%>% 
+  select(any_of(cols_needed), starts_with("d119")) %>%
+  mutate(Country = "India", Year = 2005)
+
+
+#Importing India 2015
+# They are both too big, had to use fread 
+india_2015 <- read_dta(
+  "IAIR74DT-2015-2016/IAIR74FL.DTA",
+  col_select = c(any_of(cols_needed), starts_with("d119"))
+) %>%
+  mutate(Country = "India", Year = 2015)
+
+#Importing India 2020
+india_2020 <- read_dta(
+  "IAIR7EDT-2019-2021/IAIR7EFL.DTA",
+  col_select = c(any_of(cols_needed), starts_with("d119"))
+) %>%
+  mutate(Country = "India", Year = 2020)
+```
+
+```{r}
+#Importing  Nigeria DHS GBV Data 
+#Importing Nigeria 2008
+nigeria_2008 <- read_dta("NGIR53DT/NGIR53FL.DTA") %>% 
+  select(any_of(cols_needed), starts_with("d119")) %>%
+  mutate(Country = "Nigeria", Year = 2008)
+
+#Importing Nigeria 2013
+nigeria_2013 <- read_dta("NGIR6ADT-2013/NGIR6AFL.DTA")%>% 
+  select(any_of(cols_needed), starts_with("d119")) %>%
+  mutate(Country = "Nigeria") %>% 
+  mutate(Year = 2013)
+
+#Importing Nigeria 2018
+
+nigeria_2018 <- read_dta("NGIR7BDT-2018/NGIR7BFL.DTA") %>% 
+  select(any_of(cols_needed), starts_with("d119")) %>%
+  mutate(Country = "Nigeria") %>% 
+  mutate(Year = 2018)
+
+#Importing Nigeria 2024
+
+nigeria_2024 <- read_dta("NGIR8BDT-2024/NGIR8BFL.DTA") %>% 
+  select(any_of(cols_needed), starts_with("d119")) %>%
+  mutate(Country = "Nigeria") %>% 
+  mutate(Year = 2024)
+
+```
+
+```{r}
+#Importing Kenya DHS GBV Data 
+
+#Importing Kenya 2008
+kenya_2008 <- read_dta("KEIR52DT-2008/KEIR52FL.DTA") %>% 
+  select(any_of(cols_needed), starts_with("d119")) %>%
+  mutate(Country = "Kenya") %>% 
+  mutate(Year = 2008)
+
+#Importing Kenya 2014
+kenya_2014 <- read_dta("KEIR72DT-2014/KEIR72FL.DTA")%>% 
+  select(any_of(cols_needed), starts_with("d119")) %>%
+  mutate(Country = "Kenya") %>% 
+  mutate(Year = 2014)
+
+#Importing Kenya 2022
+kenya_2022 <- read_dta("KEIR8CDT-2022/KEIR8CFL.DTA")%>% 
+  select(any_of(cols_needed), starts_with("d119")) %>%
+  mutate(Country = "Kenya") %>% 
+  mutate(Year = 2022)
+```
+
+
+
+
+
+
+
+
+
+
+
+/
+/
+/
+/
+/
+
+
+
+
+## Data Wrangling: 
+
+```{r}
+# Combining all surveys from different years all together (adding more years) 
+#Ghana: 
+allyears_ghana <- suppressWarnings(bind_rows(ghana_2008, ghana_2022))
+
+allyears_ghana
+
+#India
+
+allyears_india <- suppressWarnings(bind_rows(india_2005, india_2015, india_2020))
+
+
+#Nigeria 
+all_years_nigeria <- suppressWarnings(bind_rows(nigeria_2008, nigeria_2013, nigeria_2018, nigeria_2024))
+
+#Kenya
+
+all_years_kenya <- suppressWarnings(bind_rows(kenya_2008, kenya_2014, kenya_2022))
+
+
+
+```
+
+
+
+/
+/
+/
+##Merging Datasets: 
+
+```{r}
+#Combining all datasets for ALL years survey for all countries.
+combined_dhs<- suppressWarnings(bind_rows(allyears_ghana, allyears_india, all_years_nigeria, all_years_kenya))  %>% 
+  filter(v044 == 1) #Filtering for women age 15-49 selected and interviewed for the domestic violence module
+
+head(combined_dhs_2)
+nrow(combined_dhs_2)
+ncol(combined_dhs_2)
+```
+
+
+The dataset has 362588 observations of women between 15-49 who were interviewed on the GBV module from 4 countries (India, Kenya, Ghana, Nigeria) and 65 variables of interest. 
+
+```{r}
+#Wrangling new dataset: 
+
+
+#Creating new variable names: 
+combined_dhs_2<- combined_dhs%>%
+  mutate(
+  reported_to_family =
+    as.integer(rowSums(across(d119a:d119r), na.rm = TRUE) > 0),
+
+  reported_to_friend =
+    as.integer(rowSums(across(c(d119s, d119t, d119xd)), na.rm = TRUE) > 0),
+
+  reported_to_other =
+    as.integer(rowSums(across(c(d119xa, d119x)), na.rm = TRUE) > 0),
+
+  reported_to_cs_organisation =
+    as.integer(rowSums(across(c(d119xc, d119xi, d119xj, d119xk)), na.rm = TRUE) > 0)
+) %>% 
+  mutate(across(
+    c( d119u, d119xb, d119xf, d119w, d119xe, d119xg, d119xh, d119v),
+    ~ as.integer(replace_na(.x, 0) > 0)
+  )) %>% 
+  mutate(across(c(d119y, d118y), ~ as.integer(replace_na(.x, 1) == 1))) %>%  
+  rename(
+    "caseid" = caseid,
+    "current age - respondent" = v012,
+    "ever-married sample" = v020,
+    "literacy" = v155,
+    "ever participated in a literacy program outside of primary" = v156,
+    "highest educational level" = v106,
+    "highest year of education" = v107,
+    "education in single years" = v133,
+    "educational attainment" = v149,
+    "wealth index" = v190,
+    "wealth index factor score (5 decimals)" = v191,
+    "type of place of residence v025" = v025,
+    "type of place of residence v024" = v024,
+    "type of place of residence v102" = v102,
+    "number of children 5 and under in household (de jure)" = v137,
+    "Ever been threatened with harm by husband/partner" = d103b,
+    "Experienced any less severe violence" = d106,
+    "Experienced any severe violence" = d107,
+    "Previous husband: ever hit, slap, kick, or physically hurt respondent" = d130a,
+    "Respondent was not hurt by anyone during a pregnancy" = d118y,
+    "No person other than husband/partner ever physically hurt respondent" = d115y,
+    "Experienced any sexual violence" = d108,
+    "Previous husband/partner: physically forced to have sex or to perform sexual acts" = d130b,
+    "Ever forced to have sex by anyone other than husband/partner in last 12 months" = d124,
+    "Ever forced to perform unwanted sexual acts" = d125,
+    "Have ever told anyone else about violence" = d128,
+    "Respondent did not seek help from anyone" = d119y,
+    "reported_to_neighbour" = d119u,
+    "reported_to_Social_service_organisation" = d119xb,
+    "reported_to_Religious_leader" = d119xf,
+    "reported_to_Employer" = d119w,
+    "reported_to_Police" = d119xe,
+    "reported_to_Criminal_Justice_System" = d119xg,
+    "reported_to_Public_health_official" = d119xh,
+    "reported_to_Public_education" = d119v, 
+    "Country" = Country, 
+    "Year" = Year
+  ) %>% 
+  select(-(starts_with("d119")))  %>% 
+  #Creating GBV variable
+  mutate(
+    experienced_GBV = if_else(
+      # Condition: either any GBV variable >= 1
+      rowSums(across(c(
+        `Ever been threatened with harm by husband/partner`,
+        `Experienced any less severe violence`,
+        `Experienced any severe violence`,
+        `Experienced any sexual violence`,
+        `Previous husband: ever hit, slap, kick, or physically hurt respondent`,
+        `Previous husband/partner: physically forced to have sex or to perform sexual acts`,
+        `Ever forced to have sex by anyone other than husband/partner in last 12 months`,
+        `Ever forced to perform unwanted sexual acts`
+      ), ~ .x >= 1), na.rm = TRUE) > 0
+      # OR if either of the "no violence" indicators is 0
+      | replace_na(`No person other than husband/partner ever physically hurt respondent`, 1) == 0
+      | replace_na(`Respondent was not hurt by anyone during a pregnancy`, 1) == 0,
+      1,  # value if TRUE
+      0   # value if FALSE
+    )) %>%
+  mutate(`education in single years` = if_else(`education in single years` == 99,NA, `education in single years`)) %>%
+  mutate(`ever participated in a literacy program outside of primary` = if_else(`ever participated in a literacy program outside of primary` == 9,NA, `ever participated in a literacy program outside of primary`)) %>% 
+  mutate(`educational attainment` = if_else(`educational attainment` == 9, NA, `education in single years`))
+
+
+summary(combined_dhs_2$`wealth index factor score (5 decimals)`) #How is it measured : PCA 
+summary(combined_dhs_2$`wealth index`) #How is it measured? : A categorical variable of 1-5
+summary(combined_dhs_2$`education in single years`) #on a x -y scale of schooling, hower it is country specific 
+summary(combined_dhs_2$`ever participated in a literacy program outside of primary`)
+summary(combined_dhs_2$`type of place of residence v025`)
+summary(combined_dhs_2$`number of children 5 and under in household (de jure)`)
+```
+Wealth index factor: measured using principal components analysis (PCA), Households below the average on the combined assets/amenities will have negative scores. Households above the average will have positive scores. (higher number richer households and lower scores poorer households )
+
+Education in single years: A measure of education on x and y axis (x the level, and y the specific grade, however, it is country specific)
+
+```{r}
+#Remove ever married variable 
+summary (combined_dhs_2$`ever-married sample`)
+```
+
+```{r}
+#EDA
+
+#Total surveyed
+total_surveyed <- combined_dhs_2 %>% 
+  group_by(Country) %>% 
+  summarise(total_surveyed = n())
+
+total_surveyed
+```
+
+
+```{r}
+combined_dhs_2 %>%
+  summarise(Total_GBV_all_surveys= sum(experienced_GBV==1, na.rm =TRUE)/nrow(combined_dhs_2))
+
+```
+```{r}
+#Percentage that experienced GBV
+
+experienced_GBV <- combined_dhs_2 %>% 
+  group_by(Country) %>% 
+  summarise(
+    total_surveyed= n(), 
+    pct_experienced_GBV= 100 * sum(experienced_GBV == 1, na.rm = TRUE)/total_surveyed
+  )
+
+experienced_GBV
+```
+
+
+```{r}
+#Total that reported GBV
+reported_GBV<- combined_dhs_2 %>% 
+  group_by(Country) %>% 
+  summarise(
+    `Total Surveyed`= n(), 
+    `Total experienced GBV`= sum(experienced_GBV == 1, na.rm = TRUE),
+    `Total Reported GBV` = 100 * sum(`Respondent did not seek help from anyone` == 0, na.rm = TRUE)/`Total experienced GBV`)
+  
+reported_GBV
+```
+
+
+```{r}
+#A graph that shows the size of each graph and how many experienced and how many reported
+barplot <- combined_dhs_2 %>% 
+  group_by(Country) %>% 
+  summarise(
+    `Sample Total`= n(), 
+    `Experienced GBV Total`= sum(experienced_GBV == 1, na.rm = TRUE),
+    `Reported GBV Total` = sum(`Respondent did not seek help from anyone` == 0, na.rm = TRUE)) %>% 
+  pivot_longer(
+    cols = c(`Sample Total`,`Experienced GBV Total` , `Reported GBV Total`),
+    names_to = "Category",
+    values_to = "Count"
+  ) 
+
+
+
+barplot$Category <- factor(barplot$Category, levels = c("Sample Total", "Experienced GBV Total", "Reported GBV Total"))
+
+
+
+ggplot(barplot, aes(x = Country, y = Count, fill = Category)) +
+  geom_col(position = "dodge") +
+ scale_fill_manual(
+    values = c(
+      "Sample Total" = "lightpink",      # light red
+      "Experienced GBV Total" = "red",     # medium pink-red
+      "Reported GBV Total" = "darkred"         # darker red
+    )
+  ) +
+  labs(
+    title = "Number of Survey Respondents and Women Experiencing GBV by Country, 2005–2024",
+    x = "Country",
+    y = " count of women ",
+    fill = "Measure"
+  ) +
+  theme_minimal(base_size = 14)
+
+```
+
+```{r}
+#A graph that shows the size of each graph and how many experienced and how many reported
+barplot <- combined_dhs_2 %>% 
+  group_by(Country) %>% 
+  summarise(
+    `Sample Total`= n(), 
+    `Experienced GBV Total`= sum(experienced_GBV == 1, na.rm = TRUE)) %>% 
+  pivot_longer(
+    cols = c(`Sample Total`,`Experienced GBV Total`),
+    names_to = "Category",
+    values_to = "Count"
+  ) 
+
+
+barplot$Category <- factor(barplot$Category, levels = c("Sample Total", "Experienced GBV Total"))
+
+
+
+ggplot(barplot, aes(x = Country, y = Count, fill = Category)) +
+  geom_col(position = "dodge") +
+ scale_fill_manual(
+    values = c(
+      "Sample Total" = "lightpink",      # light red
+      "Experienced GBV Total" = "red"        # darker red
+    )
+  ) +
+  labs(
+    title = "Number of Survey Respondents and Women Experiencing GBV by Country, 2005–2024",
+    x = "Country",
+    y = " Number of Women",
+    fill = "Measure"
+  ) +
+  theme_minimal(base_size = 14)
+
+```
+
+```{r}
+library(scales)
+
+# Summarize data by Country and Reported_GBV
+bar_graph_2 <- combined_dhs_2 %>%
+  filter(experienced_GBV == 1) %>%
+  filter(!is.na(`Respondent did not seek help from anyone`)) %>%
+  mutate(
+    Report_GBV = `Respondent did not seek help from anyone` == 0,
+    Reported_GBV = if_else(Report_GBV, "Reported", "Did not report")
+  ) %>%
+  group_by(Country, Reported_GBV) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  group_by(Country) %>%
+  mutate(pct = n / sum(n))  # calculate proportion for stacked bar
+
+# Plot 100% stacked bar chart
+ggplot(bar_graph_2, aes(x = Country, y = pct, fill = Reported_GBV)) +
+  geom_col() +
+  geom_text(data = filter(bar_graph_2, Reported_GBV == "Reported"),
+            aes(label = paste0(round(pct*100), "%")),
+            position = position_stack(vjust = 0.5), color = "white") +
+  scale_fill_manual(values = c("Reported" = "red", "Did not report" = "darkred")) +
+  scale_y_continuous(labels = percent_format()) +
+  labs(
+    title = "Percentage of Self-Initiated GBV Reporting by Country, 2005–2024",
+    x = "Country",
+    y = "Experienced GBV",
+    fill = "Reported GBV"
+  ) +
+  theme_minimal(base_size = 14)
+  
+```
+
+#GBV prevalence in sample: 
+According to the UN definition, which guided the identifcation of experienced GBV variable, According to all our samples the percentage of women who are randomaly sampled who have experienced gender based violence is 25%. So 1 in 4 women, had been Ever been threatened with harm by husband/partner,Experienced any less severe violence, Experienced any severe violence, Experienced any sexual violence, Previous husband: ever hit, slap, kick, or physically hurt respondent, Previous husband/partner: physically forced to have sex or to perform sexual acts, Ever forced to have sex by anyone other than husband/partner in last 12 months.Ever forced to perform unwanted sexual acts. Overall showing that GBV is pretty prevalent. 
+
+Though the prevalence rates vary significantly accross countries, there seems to be a high count of GBV in Kenya with what appears as almost half of the sample (precisely 51%),have experienced and then Nigeria (34%) and India (19%)
+
+However when we look at the graph we can see that even less, report GBV, as it is comparatively lower have reported to their experience. To examine the disparity in reporting we can see that in this graph, where reported is constantly lower than experienced. 
+
+However there are country specific differences among the survey responses: There is a very low reporting rate in india and nigeria, but there seems to be an equal amount of reporting and no reporting relative to those who experience GBV. 
+
+
+
+
+
+```{r}
+#As I started my analysis: Only state and non state: 
+
+#Creating dataset for 2 different reporting modes: 
+Data_with_2_reporting_modes <- combined_dhs_2 %>% 
+  mutate(state_reporting = if_else(
+      rowSums(across(c(reported_to_Police,reported_to_Criminal_Justice_System, reported_to_Public_health_official, reported_to_Public_education),
+                     ~ .x >= 1), na.rm = TRUE) > 0,
+      1, 0
+    )) %>%
+  mutate(non_state_reporting = if_else(
+      rowSums(across(c(reported_to_Social_service_organisation, reported_to_Religious_leader, reported_to_cs_organisation, reported_to_Employer, reported_to_neighbour, reported_to_family, reported_to_friend, reported_to_other),
+                     ~ .x >= 1), na.rm = TRUE) > 0,
+      1, 0
+    ))
+#Summary stats of 
+Reporting_proportion<- Data_with_2_reporting_modes %>%
+   filter(experienced_GBV == 1) %>%
+  group_by(Country) %>% 
+  summarise(
+    total_experienced = n(),
+    total_reported = sum(`Respondent did not seek help from anyone` == 0, na.rm = TRUE),
+    total_reported_state =  sum(state_reporting == 1, na.rm = TRUE), #How many of those reported went to state 
+    total_reported_non_state = sum(non_state_reporting == 1, na.rm = TRUE)  #How many of those reported went to non-state
+  )
+
+Reporting_proportion
+
+```
+
+```{r}
+#Descriptive stats table for #2 modes.
+#First table: 
+Reporting_proportion_2<- Data_with_2_reporting_modes %>%
+   filter(experienced_GBV == 1) %>%
+  group_by(Country) %>% 
+  summarise(
+    total_experienced = n(),
+    total_reported = sum(`Respondent did not seek help from anyone` == 0, na.rm = TRUE),
+    pct_reported = 100 * (sum(`Respondent did not seek help from anyone` == 0, na.rm = TRUE)/total_experienced),
+    total_reported_state = sum(state_reporting == 1, na.rm = TRUE),
+    pct_reported_state = 100 * (sum(state_reporting == 1, na.rm = TRUE)/ total_experienced), #How many of those reported went to state
+    total_reported_non_state = sum(non_state_reporting == 1, na.rm = TRUE), #How many of those reported went to non-state
+    pct_reported_non_state = 100 * (sum(non_state_reporting == 1, na.rm = TRUE)/ total_experienced)
+)
+
+Reporting_proportion_2
+
+
+#1st table on total surveyed per country : 
+Total_sample<- combined_dhs_2 %>% 
+  group_by(Country)%>%
+  summarise(total_surveyed = n(), 
+            pct_surveyed = 100 * (n()/nrow(combined_dhs_2)))
+
+
+#3rd Table: Combining both + Wrangling 
+descriptive_stats_2modes <- left_join(Total_sample, Reporting_proportion_2, by = "Country" ) %>% 
+  group_by(Country) %>%
+  mutate(pct_experienced = 100* (total_experienced/total_surveyed)) 
+
+
+descriptive_stats_2modes
+
+```
+
+```{r}
+#Creating final descriptive stats table: 
+
+#final Descriptive statistics table. 
+# Step 1: Add info rows
+long_table_2 <- descriptive_stats_2modes %>%
+  select(Country,
+         total_surveyed, pct_surveyed,
+         total_experienced, pct_experienced, 
+         total_reported, pct_reported,
+         total_reported_state, pct_reported_state,
+         total_reported_non_state, pct_reported_non_state
+         ) %>%
+  pivot_longer(
+    cols = -Country,
+    names_to = c(".value", "Measurement"),
+    names_pattern = "(total|pct)_(.*)"
+  ) %>%
+  # Combine count and percent
+  mutate(Value = paste0(total, " | ", round(pct, 2))) %>%
+  select(Country, Measurement, Value)
+
+# Add informational rows
+info_rows <- tibble(
+  Measurement = c("base_surveyed", "base_reported"),
+  Country = rep(NA_character_, 2),
+  Value = rep(NA_character_, 2)
+)
+
+long_table_2 <- bind_rows(
+  long_table_2 %>% filter(Measurement == "surveyed"),
+  info_rows[1,],  # info before experienced
+  long_table_2 %>% filter(Measurement == "experienced"),
+  info_rows[2,],  # info before reported to state
+  long_table_2 %>% filter(Measurement == "reported"),
+  long_table_2 %>% filter(Measurement == "reported_state"),
+  long_table_2 %>% filter(Measurement == "reported_non_state")
+)
+
+# Step 2: Pivot wider
+wide_table_2modes <- long_table_2 %>%
+  pivot_wider(names_from = Country, values_from = Value) %>%
+  # Rename Measurement for readability
+  mutate(Measurement = recode(Measurement,
+                              surveyed = "Survey Participation",
+                              experienced = "Experienced GBV",
+                              reported = "Reported GBV to someone",
+                              reported_state = "Reported To State",
+                              reported_non_state = "Reported To Non-State",
+                              reported_social_circle = "Reported To Social Circle",
+                              base_surveyed = "Base =  per country survey participation",
+                              base_reported = "Base = having experienced GBV"))
+
+
+wide_table_2modes
+
+```
+
+```{r}
+#Extracting the widetable for latex: 
+
+#Exporting into latex :
+latex_table <- wide_table_2modes %>%
+  kable(format = "latex", booktabs = TRUE, escape = FALSE, 
+        caption = "GBV Survey Summary by Country") %>%
+  add_header_above(c(" " = 1, "Ghana" = 1, "India" = 1, "Kenya" = 1, "Nigeria" = 1)) 
+
+
+
+cat(latex_table)
+```
+
+
+
+There seems to be overalap, let's see how many only responded to each and how many reported to both. 
+```{r}
+Exclusive_Reporting <-  Data_with_2_reporting_modes %>%
+  filter(experienced_GBV == 1) %>%
+  mutate(
+    report_type = case_when(
+      state_reporting == 1 & non_state_reporting == 0 ~ "Reported Only State",
+      state_reporting == 0 & non_state_reporting == 1 ~ "Reported Only Non-State",
+      state_reporting == 1 & non_state_reporting == 1 ~ "Reported Both"
+    )
+  ) %>%
+  group_by(Country, report_type) %>%
+  summarise(Count = n(), .groups = "drop")
+
+#Summary stats of the general exclusive reporting. 
+Exclusive_Reporting_summary <- Exclusive_Reporting %>% 
+  pivot_wider(names_from = report_type, values_from = Count, values_fill = 0)
+
+#Pie chart of the exclusive reporting of survey.
+Exclusive_Reporting_proportion<- Exclusive_Reporting %>%
+group_by(Country) %>%
+  mutate(Proportion = Count / sum(Count))
+
+
+ggplot(Exclusive_Reporting_proportion, aes(x = "", y = Proportion, fill = report_type)) +
+  geom_col(width = 1.5) +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Country) +
+  scale_fill_manual(values = c("grey", "purple", "pink", "red")) +
+  labs(
+    title = "Exclusive Reporting Categories of GBV by Country",
+    fill = "Report Type"
+  ) +
+  theme_void(base_size = 14)
+```
+```{r}
+
+Exclusive_Reporting <-  Data_with_2_reporting_modes %>%
+  filter(experienced_GBV == 1) %>%
+  mutate(report_type = case_when(
+      state_reporting == 1 & non_state_reporting == 1 ~ "Reported Both",
+      state_reporting == 1 & non_state_reporting == 0 ~ "Reported Only State",
+      state_reporting == 0 & non_state_reporting == 1 ~ "Reported Only Non-State")) %>%
+  filter(!is.na(report_type)) %>% 
+  mutate(
+    report_type = fct_relevel(report_type, 
+                              "Reported Only Non-State",
+                              "Reported Both",
+                              "Reported Only State")
+  ) %>%
+  group_by(Country, report_type) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  group_by(Country) %>%
+  mutate(pct = Count / sum(Count))
+
+
+
+
+ggplot(Exclusive_Reporting, aes(x = Country, y = pct, fill = report_type)) +
+ geom_col(position = "fill") + 
+geom_text(aes(label = paste0(round(pct*100), "%")),
+            position = position_stack(vjust = 0.5), color = "white") +
+   scale_fill_manual(
+    values = c(
+      "Reported Only Non-State" = "#F4A6C1",  # light pink
+      "Reported Both" = "#E85A8C",            # medium pink
+      "Reported Only State" = "#CC2F4D"       # deep pink-red
+    )
+  ) +
+  labs(
+    title = "Distribution of Exclusive GBV Reporting Choices",
+    fill = "Reporting Choice",
+  y = "%") +
+  theme_minimal()
+
+```
+
+
+After evaluating the distribution, we can see that the majority of non-state reporting is less about social organisations and NGOs and more about family and friends, hence we proceed to further disegregate the data, into 3 reporting modes. 
+
+```{r}
+#Creating variables for different reporting modes: 
+
+Data_with_3_reporting_modes <- combined_dhs_2 %>% 
+  mutate(state_reporting = if_else(
+      rowSums(across(c(reported_to_Police,reported_to_Criminal_Justice_System, reported_to_Public_health_official, reported_to_Public_education),
+                     ~ .x >= 1), na.rm = TRUE) > 0,
+      1, 0
+    )) %>%
+  mutate(non_state_reporting = if_else(
+      rowSums(across(c(reported_to_Social_service_organisation, reported_to_Religious_leader, reported_to_cs_organisation, reported_to_Employer),
+                     ~ .x >= 1), na.rm = TRUE) > 0,
+      1, 0
+    )) %>% 
+  mutate(social_circle_reporting = if_else(
+      rowSums(across(c(reported_to_neighbour, reported_to_family, reported_to_friend, reported_to_other),
+                     ~ .x >= 1), na.rm = TRUE) > 0,
+      1, 0
+    ))
+
+Data_with_3_reporting_modes
+
+```
+
+
+```{r}
+#Summary stats of 3 modes of reporting:
+
+Reporting_proportion<- Data_with_3_reporting_modes %>%
+   filter(experienced_GBV == 1) %>%
+  group_by(Country) %>% 
+  summarise(
+    total_experienced = n(),
+    total_reported = sum(`Respondent did not seek help from anyone` == 0, na.rm = TRUE),
+    pct_reported = 100 * (sum(`Respondent did not seek help from anyone` == 0, na.rm = TRUE)/total_experienced),
+    total_reported_state = sum(state_reporting == 1, na.rm = TRUE),
+    pct_reported_state = 100 * (sum(state_reporting == 1, na.rm = TRUE)/ total_experienced), #How many of those reported went to state
+    total_reported_non_state = sum(non_state_reporting == 1, na.rm = TRUE), #How many of those reported went to non-state
+    pct_reported_non_state = 100 * (sum(non_state_reporting == 1, na.rm = TRUE)/ total_experienced),
+    total_reported_social_circle = sum(social_circle_reporting == 1, na.rm = TRUE), 
+    pct_reported_social_circle = 100 * (sum(social_circle_reporting == 1, na.rm = TRUE)/ total_experienced)
+  )
+
+Reporting_proportion
+
+
+```
+```{r}
+library(tidyverse)
+
+# Reshape data to long format for ggplot
+Reporting_long <- Reporting_proportion %>%
+  select(Country, pct_reported_state, pct_reported_non_state, pct_reported_social_circle) %>%
+  pivot_longer(
+    cols = starts_with("pct_reported"),
+    names_to = "Reporting_Type",
+    values_to = "Percentage"
+  ) %>%
+   mutate(
+    Reporting_Type = case_when(
+      Reporting_Type == "pct_reported_state" ~ "State",
+      Reporting_Type == "pct_reported_non_state" ~ "Non-State",
+      Reporting_Type == "pct_reported_social_circle" ~ "Social Circle"
+    ),
+    # Relevel factor to control stacking order
+    Reporting_Type = factor(Reporting_Type, levels = c("Social Circle", "Non-State", "State"))
+  )
+
+# Plot
+ggplot(Reporting_long, aes(x = Country, y = Percentage, fill = Reporting_Type)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(round(Percentage, 1), "%")), 
+            position = position_stack(vjust = 0.5), color = "white", size = 3) +
+  scale_fill_manual(values = c("State" = "#CC2F4D",         # dark pink
+                               "Non-State" = "#E85A8C",    # medium pink
+                               "Social Circle" = "#F4A6C1")) + # light pink
+  labs(
+    y = "Reported GBV (%)",
+    x = "Country",
+    fill = "Reporting Type",
+    title = "Proportion of GBV Reporting by Country and Type"
+  ) +
+  theme_minimal() +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+```
+
+
+
+## Descriptive statistics 
+? should I  calculate the proportion of each reporting type relative to all survivors who experienced GBV, or only relative to those who actually reported: INCLUDE ALL OF THEM. Do a graph for the presentation. A table of summary stats. Range, mean, median and standard deviation... 
+
+```{r}
+#Preparing the big final Descriptive table
+
+
+#1st table on total surveyed per country : 
+Total_sample<- combined_dhs_2 %>% 
+  group_by(Country)%>%
+  summarise(total_surveyed = n(), 
+            pct_surveyed = 100 * (n()/nrow(combined_dhs_2)))
+
+
+
+
+#2nd table: On the speeific reporting proportions. 
+Reporting_proportion
+
+#3rd Table: Combining both + Wrangling 
+descriptive_stats <- left_join(Total_sample, Reporting_proportion, by = "Country" ) %>% 
+  group_by(Country) %>%
+  mutate(pct_experienced = 100* (total_experienced/total_surveyed)) 
+
+
+descriptive_stats
+```
+
+```{r}
+
+#final Descriptive statistics table. 
+# Step 1: Add info rows
+long_table <- descriptive_stats %>%
+  select(Country,
+         total_surveyed, pct_surveyed,
+         total_experienced, pct_experienced, 
+         total_reported, pct_reported,
+         total_reported_state, pct_reported_state,
+         total_reported_non_state, pct_reported_non_state,
+         total_reported_social_circle, pct_reported_social_circle) %>%
+  pivot_longer(
+    cols = -Country,
+    names_to = c(".value", "Measurement"),
+    names_pattern = "(total|pct)_(.*)"
+  ) %>%
+  # Combine count and percent
+  mutate(Value = paste0(total, " | ", round(pct, 2))) %>%
+  select(Country, Measurement, Value)
+
+# Add informational rows
+info_rows <- tibble(
+  Measurement = c("base_surveyed", "base_reported"),
+  Country = rep(NA_character_, 2),
+  Value = rep(NA_character_, 2)
+)
+
+long_table <- bind_rows(
+  long_table %>% filter(Measurement == "surveyed"),
+  info_rows[1,],  # info before experienced
+  long_table %>% filter(Measurement == "experienced"),
+  info_rows[2,],  # info before reported to state
+  long_table %>% filter(Measurement == "reported"),
+  long_table %>% filter(Measurement == "reported_state"),
+  long_table %>% filter(Measurement %in% c("reported_non_state", "reported_social_circle"))
+)
+
+# Step 2: Pivot wider
+wide_table_2 <- long_table %>%
+  pivot_wider(names_from = Country, values_from = Value) %>%
+  # Rename Measurement for readability
+  mutate(Measurement = recode(Measurement,
+                              surveyed = "Survey Participation",
+                              experienced = "Experienced GBV",
+                              reported = "Reported GBV to someone",
+                              reported_state = "Reported To State",
+                              reported_non_state = "Reported To Non-State",
+                              reported_social_circle = "Reported To Social Circle",
+                              base_surveyed = "Base =  per country survey participation",
+                              base_reported = "Base = having experienced GBV"))
+
+
+wide_table_2
+
+
+```
+
+```{r}
+#Exporting into latex :
+latex_table <- wide_table_2 %>%
+  kable(format = "latex", booktabs = TRUE, escape = FALSE, 
+        caption = "GBV Survey Summary by Country") %>%
+  add_header_above(c(" " = 1, "Ghana" = 1, "India" = 1, "Kenya" = 1, "Nigeria" = 1)) 
+
+
+
+cat(latex_table)
+```
+
+
+
+\
+\ 
+\
+\ 
+
+##BINOMIAL REGRESSIONS : 
+#For both 2 reporting modes (state and non-state) and 3 reporting modes (state, non-state and social circle): 
+
+#A logistic regression for state reporting: 
+
+```{r}
+#A logistic regression for state reporting fiex effects on country
+library(fixest)
+
+state_reporting_model <- feglm(
+  state_reporting ~ experienced_GBV + 
+                    `Respondent did not seek help from anyone`  + 
+                     `current age - respondent` +
+                     `educational attainment` + 
+                     `wealth index factor score (5 decimals)` + 
+                      `type of place of residence v025` +
+                     `number of children 5 and under in household (de jure)`,
+  data = Data_with_2_reporting_modes,
+  family = binomial(link = "logit"),
+  fixef = "Country"   # fixed effect for country
+)
+summary(state_reporting_model)
+
+```
+
+
+
+```{r}
+#Check for multicollinearity. 
+library(car)
+vif(state_reporting_model)
+```
+Change the interpretation: 
+
+The fixed-effects logistic regression examining reporting to state-affiliated mechanisms indicates that participation in a literacy program outside of primary school increases the odds of reporting by about 8.8% (OR = 1.088, p < 0.01).However it seems that each additional year of education is associated with a 5.4% decrease in the odds of reporting (OR = 0.946, p < 0.01). Household wealth is positively related to reporting: a one-unit increase in the wealth index corresponds to a very small but statistically significant increase in the odds of reporting (OR ≈ 1.000003, p < 0.01). Overall, these results suggest that both educational experiences and socio-economic status influence the likelihood of engaging with state reporting mechanisms, even after accounting for country-level differences.
+
+#A logistic regression for non-state reporting: 
+
+```{r}
+non_state_reporting_model <- feglm(
+  non_state_reporting ~ experienced_GBV + 
+                    `Respondent did not seek help from anyone`  + 
+                     `current age - respondent` +
+                     `educational attainment` + 
+                     `wealth index factor score (5 decimals)` + 
+                      `type of place of residence v025` +
+                     `number of children 5 and under in household (de jure)`,
+  data = Data_with_2_reporting_modes,
+  family = binomial(link = "logit"),
+  fixef = "Country"   # fixed effect for country
+)
+summary(non_state_reporting_model)
+```
+*Change interpretation: 
+
+In the regression predicting reporting GBV to non-state actors, women living in rural areas (v025 = 2) had odds of reporting about 64% higher compared with urban women (p ≈ 0.062), indicating a marginally significant effect. Additionally, each additional child under five in the household was associated with odds of reporting about 40% higher (p ≈ 0.011).
+
+
+## using 3 reporting types: 
+```{r}
+#State there was no change 
+state_reporting_model_2 <- feglm(
+  state_reporting ~ experienced_GBV + 
+                    `Respondent did not seek help from anyone`  + 
+                     `current age - respondent` +
+                     `educational attainment` + 
+                     `wealth index factor score (5 decimals)` + 
+                      `type of place of residence v025` +
+                     `number of children 5 and under in household (de jure)`,
+  data = Data_with_3_reporting_modes,
+  family = binomial(link = "logit"),
+  fixef = "Country"   # fixed effect for country
+)
+summary(state_reporting_model_2) #No change 
+
+
+```
+```{r}
+#Specifically looking in social organisation and community organisations. 
+non_state_reporting_model_2<- feglm(
+  non_state_reporting ~ experienced_GBV + 
+                    `Respondent did not seek help from anyone`  + 
+                     `current age - respondent` +
+                     `educational attainment` + 
+                     `wealth index factor score (5 decimals)` + 
+                      `type of place of residence v025` +
+                     `number of children 5 and under in household (de jure)`,
+  data = Data_with_3_reporting_modes,
+  family = binomial(link = "logit"),
+  fixef = "Country"   # fixed effect for country
+)
+summary(non_state_reporting_model_2)
+```
+In the regression predicting reporting of GBV to NGOs and social organizations, each additional year of education was associated with about a 6.6% decrease in the odds of reporting (p ≈ 0.001), suggesting that more educated women were slightly less likely to turn to NGOs for reporting. Women who had ever participated in a literacy program outside of primary school had approximately 6% higher odds of reporting to NGOs and social organizations, though this effect was marginally significant (p ≈ 0.056). The wealth index factor score, which ranges roughly from –2,440,200 to 2,626,500 in this dataset, had a very small positive coefficient per unit (0.00000189), indicating that a one-unit increase barely changes the odds. However, considering the full range of the wealth index, the difference between the poorest and wealthiest households could translate to a substantial cumulative effect on reporting behavior (p ≈ 0.081). Women living in rural areas had roughly 21% higher odds of reporting to NGOs and social organizations compared with urban women, with this effect marginally significant (p ≈ 0.080). Overall, these findings suggest that rural residence and prior literacy program participation may modestly increase the likelihood of using non-state social avenues for reporting, whereas higher formal education slightly decreases it, and wealth may have a small cumulative influence across its full scale. 
+
+
+```{r}
+#Specifically looking in social circle reporting 
+social_circle_reporting_model<- feglm(
+  social_circle_reporting ~ experienced_GBV + 
+                    `Respondent did not seek help from anyone`  + 
+                     `current age - respondent` +
+                     `educational attainment` + 
+                     `wealth index factor score (5 decimals)` + 
+                      `type of place of residence v025` +
+                     `number of children 5 and under in household (de jure)`,
+  data = Data_with_3_reporting_modes,
+  family = binomial(link = "logit"),
+  fixef = "Country"   # fixed effect for country
+)
+summary(social_circle_reporting_model)
+```
+In the regression predicting reporting of GBV to a respondent’s social circle, age and the number of young children in the household were significant factors. Each additional year of age was associated with a decrease in the odds of reporting to one’s social circle by about 3.5% (p ≈ 0.0001), indicating that older women were less likely to share experiences of GBV with friends or family. Conversely, each additional child under five in the household was associated with an increase in the odds of reporting to the social circle by approximately 30% (p ≈ 0.0038), suggesting that women with more young children were more likely to turn to their immediate social networks for support. These findings highlight how age and caregiving responsibilities influence non-state, informal reporting behaviors.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r, eval = FALSE}
+#Final Descriptive statistics table for paper: 
+library(dplyr)
+library(purrr)
+
+library(dplyr)
+library(purrr)
+
+Data_with_reporting_variable <- combined_dhs_2 %>%
+  mutate(
+    # Experienced GBV
+    experienced_GBV = if_else(
+      reduce(across(c(d104, d105a:d105n, d110a:d110h, d115b:d115y)), pmax, na.rm = TRUE) >= 1,
+      1, 0
+    ),
+
+    # Reported GBV (any reporting)
+    Reported_GBV = if_else(
+      reduce(across(d119a:d119xk), pmax, na.rm = TRUE) >= 1,
+      1, 0
+    ),
+
+    # State reporting only
+    state_reporting = if_else(
+      reduce(across(c(d119xe, d119xg, d119xh)), pmax, na.rm = TRUE) >= 1,
+      1, 0
+    ),
+
+    # Non-state reporting
+    non_state_reporting = if_else(
+      reduce(across(c(d119xb, d119xf)), pmax, na.rm = TRUE) >= 1,
+      1, 0
+    ),
+
+    # Social circle (friends/family)
+    social_circle_reporting = if_else(
+      reduce(across(d119a:d119y), pmax, na.rm = TRUE) >= 1,
+      1, 0
+    )
+  )
+
+
+#Creation of reporting  variable
+# Data_with_reporting_variable <- combined_dhs_2 %>%
+#   mutate(experienced_GBV = if_else(
+#       rowSums(across(c(d104, d105a:d105n, d110a:d110h, d115b:d115y),
+#                      ~ .x >= 1), na.rm = TRUE) > 0, 1, 0, 
+# Reported_GBV = if_else(
+#       rowSums(across(c(d119a:d119xk),
+#                      ~ .x >= 1), na.rm = TRUE) > 0, 1, 0, 
+# state_reporting = if_else(
+#       rowSums(across(c(d119xe,d119xg, d119xh),
+#                      ~ .x >= 1), na.rm = TRUE) > 0, 1, 0, 
+# non_state_reporting = if_else(
+#       rowSums(across(c(d119xb,d119xf),
+#                      ~ .x >= 1), na.rm = TRUE) > 0, 1, 0, 
+# social_circle_reporting = if_else(
+#       rowSums(across(c(d119a:d119y),
+#                      ~ .x >= 1), na.rm = TRUE) > 0,
+#       1, 0
+#     ))
+
+head(Data_with_reporting_variable)
+```
+
+
+```{r}
+Total_sample_by_country <- combined_dhs_2 %>% 
+  group_by(Country)%>%
+  summarise(Total_surveyed_n = n(), 
+            pct_surveyed = 100 * (n()/nrow(combined_dhs_2)))
+
+Total_sample_by_country
+
+Reporting_total <- Data_with_3_reporting_modes %>%
+  group_by(Country) %>% 
+  summarise(
+    total_experienced_GBV = n(),
+    total_reported_GBV = sum(Reported_GBV == 1, na.rm = TRUE),
+    pct_reported_GBV = 100*(sum(Reported_GBV == 1, na.rm = TRUE)/total_experienced_GBV),
+    total_reported_state =  sum(state_reporting == 1, na.rm = TRUE), #How many of those reported went to state 
+    pct_reported_state = 100*(sum(state_reporting == 1, na.rm = TRUE)/total_experienced_GBV),
+    total_reported_non_state = sum(non_state_reporting == 1, na.rm = TRUE), #How many of those reported went to non-state
+    pct_reported_non_state = 100*(sum(non_state_reporting == 1, na.rm = TRUE)/total_experienced_GBV),
+    total_reported_social_circle = sum(social_circle_reporting == 1, na.rm = TRUE),#How many of those who reported went to friends and family. 
+    pct_reported_social_circle = 100*(sum(social_circle_reporting == 1, na.rm = TRUE)/total_experienced_GBV)
+  )
+
+Reporting_total
+
+#thINGS TO CHANGE MAKE ONE TABLE ABOUT THE total sampled, total, experienced GBV per country..
+
+
+Descriptive_statistics <- Total_sample_by_country %>%
+  left_join(Reporting_total, by = "Country")
+
+Descriptive_statistics %>% 
+  pivot_longer()
+```
+
+
+```{r}
+Descriptive_statistics_long <- Descriptive_statistics %>%
+  pivot_longer(
+    cols = -Country,          # pivot all columns except Country
+    names_to = "Measurement", # new column for variable names
+    values_to = "Value"       # new column for values
+  ) %>%
+  pivot_wider(
+    names_from = Country,     # make Country names into columns
+    values_from = Value       # values fill the new country columns
+  )
+
+Descriptive_statistics_long
+
+library(xtable)
+
+xtable_table <- xtable(Descriptive_statistics_long)
+print(xtable_table, type = "latex", file = "Descriptive_statistics.tex")
+```
+
+
+```{r}
+# Percentages...
+Reporting_percentage <- Data_with_3_reporting_modes %>% 
+   filter(experienced_GBV == 1) %>% 
+  summarise(
+    total_experienced_GBV = n(),
+    total_reported = sum(Reported_GBV == 1, na.rm = TRUE),
+    pct_reported_GBV = 100 * (total_reported / total_experienced_GBV),
+    pct_reported_state_GBV =  100 * (sum(state_reporting == 1, na.rm = TRUE) / total_experienced_GBV), #How many of those reported went to state 
+    pct_reported_non_state_GBV = 100 * (sum(non_state_reporting == 1, na.rm = TRUE) / total_experienced_GBV), #How many of those reported went to non-state
+    pct_reported_social_circle_GBV = 100 * (sum(social_circle_reporting == 1, na.rm = TRUE) / total_experienced_GBV) #How many of those who reported went to friends and family. 
+  )
+
+Reporting_percentage
+```
+
+```{r}
+#proportion of those who reported/ Relative to those who reported. 
+Reporting_proportion <- Data_with_3_reporting_modes %>% 
+   filter(experienced_GBV == 1) %>% 
+  summarise(
+    total_experienced = n(),
+    total_reported = sum(Reported_GBV == 1, na.rm = TRUE),
+    ratio_reported_state =  100 * (sum(state_reporting == 1, na.rm = TRUE) / total_reported), #How many of those reported went to state 
+    ratio_reported_non_state = 100 * (sum(non_state_reporting == 1, na.rm = TRUE) / total_reported), #How many of those reported went to non-state
+    ratio_reported_social_circle = 100 * (sum(social_circle_reporting == 1, na.rm = TRUE) / total_reported) #How many of those who reported went to friends and family. 
+  )
+
+Reporting_proportion
+
+```
+##Binomial Regressions 
+#assuming they have two options, state or non-state reporting. 
+
+#remove the Variables I don't need. 
+```{r}
+# Binomial regression: (Assuming they only have two options, go to the state or don't go to the state...)
+
+#Creating variables for different reporting modes: 
+Data_with_2_reporting_modes<- Data_with_reporting_variable %>% 
+  mutate(state_reporting = if_else(
+      rowSums(across(c(d119xe,d119xg, d119xh),
+                     ~ .x >= 1), na.rm = TRUE) > 0,
+      1, 0
+    )) %>%
+  mutate(non_state_reporting = if_else(
+      rowSums(across(c(d119xb,d119xf,d119a:d119y),
+                     ~ .x >= 1), na.rm = TRUE) > 0,
+      1, 0
+    ))
+
+```
+
+
+```{r}
+#A logistic regression for state reporting: 
+binomial_model <- glm(state_reporting ~ experienced_GBV + Reported_GBV + v012 + v020 + v155 + v156 + v106 + v107 + v133 + v149 + v190 + v191 + v025 + v024 + v102 + v137 + Country,
+             data = Data_with_2_reporting_modes,
+             family = binomial) 
+
+summary(binomial_model)
+
+```
+
+Interesting findings, 
+- for those that report to the state some main predictors are: v191: wealth index, so women from nigeria ad india are less likely to report in general than women in Ghana and wealth is a significant factor in determining reporting to the state. one unit increase in the wealth index is asociated with a an 1 time increase in the odds (small change) of reporting the state.
+
+```{r}
+#A logistic regression for non-state reporting: 
+binomial_model <- glm(non_state_reporting ~ experienced_GBV + Reported_GBV + v012 + v020 + v155 + v156 + v106 + v107 + v133 + v149 + v190 + v191 + v025 + v024 + v102 + v137 + Country,
+             data = Data_with_2_reporting_modes,
+             family = binomial) 
+
+summary(binomial_model)
+```
+A factor that is statistically significant is V137, (number of children 5 and under in household (usual)) having younger children, which shows with having one additional young child increases women the odds of them reporting is 1.27 times more likely to non-state, which is really low. 
+
+
+##Regressions per country: 
+#Ghana 
+
+```{r}
+
+
+#Non-state Reporting 
+Ghana_Nstate <-  glm(non_state_reporting ~ experienced_GBV + Reported_GBV + v012 + v020 + v155 + v156 + v106 + v107 + v133 + v149 + v190 + v191 + v025 + v024 + v102 + v137,
+             data = Data_with_2_reporting_modes %>% filter(Country == "Ghana"),
+             family = binomial) 
+
+summary(Ghana_Nstate)
+```
+
+
+```{r}
+#State Reporting: 
+G_state <- glm(state_reporting ~ experienced_GBV + Reported_GBV + v012 + v020 + v155 + v156 + v106 + v107 + v133 + v149 + v190 + v191 + v025 + v024 + v102 + v137,
+             data = Data_with_2_reporting_modes %>% filter(Country == "Ghana"),
+             family = binomial) 
+
+summary(G_state)
+
+```
+
+Interpretation: 
+V191 is the only statistically significant factor for reporting to the state in Ghana, V191 indicates the wealth index factor score ( at 5 decimals measurements). Where one increase in wealth increases one times the odds of state reporting. which is really low. 
+
+#Nigeria 
+
+```{r}
+#Nigeria
+
+range(Data_with_2_reporting_modes$v025)
+range(Data_with_2_reporting_modes$v149)
+#Non-state Reporting 
+Nigeria_Nstate <-  glm(non_state_reporting ~ experienced_GBV + Reported_GBV + v012 + v020 + v155 + v156 + v106 + v107 + v133 + v149 + v190 + v191 + v025 + v024 + v102 + v137,
+             data = Data_with_2_reporting_modes %>% filter(Country == "Nigeria"),
+             family = binomial) 
+
+summary(Nigeria_Nstate)
+```
+Interpretation: 
+Nigeria = 
+v156 ("ever participated in a literacy program outside of primary")  = e ^-1.177e+00 : 0.30820195895 in the log of odds, so it decreases the odds of participating in reporting to non state. 
+v107 ("highest year of education") = e ^ -6.867e-01 = 0.50323400  decreases the odds in participating in non-state reporting mechanisms. 
+v149 ("educational attainment")= e^ 1.656e+00 = 5.23831561951, one increase in education level, means higher non-state reporting. 
+v025 ("type of place of residence 1 is urban and 2 is rural") = e^ 9.315e-01., increases the odds by 2.53 times in reporting to non-state mechanisms. 
+
+
+
+   
+
+```{r}
+#State Reporting: 
+Nigeria_state <- glm(state_reporting ~ experienced_GBV + Reported_GBV + v012 + v020 + v155 + v156 + v106 + v107 + v133 + v149 + v190 + v191 + v025 + v024 + v102 + v137,
+             data = Data_with_2_reporting_modes %>% filter(Country == "Nigeria"),
+             family = binomial) 
+
+summary(Nigeria_state)
+
+```
+Nothing is statistically significant for women in Nigeria reporting to the state. 
+
+#India 
+```{r}
+
+#India
+
+#Non-state Reporting 
+India_Nstate <-  glm(non_state_reporting ~ experienced_GBV + Reported_GBV + v012 + v020 + v155 + v156 + v106 + v107 + v133 + v149 + v190 + v191 + v025 + v024 + v102 + v137,
+             data = Data_with_2_reporting_modes %>% filter(Country == "India"),
+             family = binomial) 
+
+summary(Ghana_Nstate)
+```
+v012- current age of the respondent: and one increase in age, is associated with a 0.93062395355 decrease in the odds of reporting. Older women less likely to report. 
+
+```{r}
+#State Reporting: 
+India_state <- glm(state_reporting ~ experienced_GBV + Reported_GBV + v012 + v020 + v155 + v156 + v106 + v107 + v133 + v149 + v190 + v191 + v025 + v024 + v102 + v137,
+             data = Data_with_2_reporting_modes %>% filter(Country == "India"),
+             family = binomial) 
+
+summary(G_state)
+
+```
+Wealth is a statistical indicator for state reporting increasinhg the odds to state reporting: 1.00001083006. 
+
+
+
+## Data reporting looking at 3 modes of reporting (State, non-state reporting and social circles): 
+##Multuvariate logitical regression
+
+Using multivariate logistic regression because it me model these three outcomes jointly, accounting for potential correlations between them.Especially as these outcomes are not independent—for example, someone who reports to a social circle may as well to report to the state or social organisations. 
+```{r}
+Data_with_3_reporting_modes<- Data_with_reporting_variable %>% 
+  mutate(state_reporting = if_else(
+      rowSums(across(c(d119xe,d119xg, d119xh),
+                     ~ .x >= 1), na.rm = TRUE) > 0,
+      1, 0
+    )) %>%
+  mutate(non_state_reporting = if_else(
+      rowSums(across(c(d119xb,d119xf),
+                     ~ .x >= 1), na.rm = TRUE) > 0,
+      1, 0
+    )) %>% 
+  mutate(social_circle_reporting = if_else(
+      rowSums(across(c(d119a:d119y),
+                     ~ .x >= 1), na.rm = TRUE) > 0,
+      1, 0
+    ))
+```
+
+
+```{r, eval = FALSE}
+#Fitting a multivariate logistic regression:  
+library(brms)
+model <- brm(
+  bf(state_reporting ~ experienced_GBV + Reported_GBV + v012 + v020 + v155 + v156 + v106 + v107 + v133 + v149 + v190 + v191 + v025 + v024 + v102 + v137, family = bernoulli()) +
+    
+  bf(non_state_reporting ~ experienced_GBV + Reported_GBV + v012 + v020 + v155 + v156 + v106 + v107 + v133 + v149 + v190 + v191 + v025 + v024 + v102 + v137, family = bernoulli()) +
+    
+  bf(social_circle_reporting ~ experienced_GBV + Reported_GBV + v012 + v020 + v155 + v156 + v106 + v107 + v133 + v149 + v190 + v191 + v025 + v024 + v102 + v137, family = bernoulli()),
+  data = Data_with_3_reporting_modes,
+  chains = 4, iter = 1000
+)
+
+summary(model)
+
+```
+
+statereporting_v137                       0.80      0.54     0.18     1.55 4.55        4       11
+A one unit increase in v137 (number of children 5 and under in household (de jure)) is associated with 0.8 increase in the log odds of reporting to state.  (around 2.2 fold increase in the odds of reporting). 
+
+nonstatereporting_v020                   -0.96      0.60    -1.71    -0.14 3.95        4       13
+v020- ever-married sample being in the ever-married being ever married is associated with  about 38% of the odds for unmarried women.
+
+nonstatereporting_v149                    0.63      0.49     0.14     1.33 4.53        4       11
+One unit increase in educational attainment is associated with 0.63 increase in the odds of reporting to non-state. exp(0.63) (nearly 88% higher odds per unit increase in education.)
+
+
+socialcirclereporting_v155                1.26      0.16     0.98     1.40 4.51        4       11
+in being literate is asociated with more than triples the odds of social circle reporting. 
+
+socialcirclereporting_v025               -1.12      0.50    -1.67    -0.47 3.37        4       12
+The odds of reporting to the social circle are roughly  exp(-1.12) = 67% lower for that type of residence compared to the reference category—if the estimate were reliable.
+
+however for all the coefficient we  cannot trust their estimate yet because none of the model estimates not converge (Rhat >> 1) and the effective sample sizes are extremely low.
+
+Two profiles of women, mean of age and wealth index, number of children. Odds ratio...  
+
+
+
+
+
+
+
+
+
+##Test code (Mainly done on Rwanda)
+
+
+```{r}
+
+#Variables needed for the study: 
+cols_needed <- c(
+  #Identifiable variables
+  "caseid","v012","v020","v155","v156","v106","v107","v133",
+  "v149","v190","v191","v025","v024","v102","v137", "v044"
+  
+  #emotional abuse my husband 
+  "d104", 
+  
+  # d105a:d105n: Experiencing physical violence from Partner 
+  "d105a","d105b","d105c","d105d","d105e","d105f","d105g","d105h","d105i","d105j","d105k","d105l","d105m","d105n",
+  
+  # d110a:d110h : has physical injuries due to abuse  
+  "d110a","d110b","d110c","d110d","d110e","d110f","d110g","d110h",
+  
+  # d115b:d115y: experiencing physical violence from family 
+  "d115b","d115c","d115d","d115e","d115f","d115g","d115h","d115i","d115j","d115k","d115l","d115m","d115n",
+  "d115o","d115p","d115q","d115r","d115s","d115t","d115u","d115v","d115w","d115x","d115y",
+  
+  # d119a:d119y: reporting mechanisms
+  "d119a","d119b","d119c","d119d","d119e","d119f","d119g","d119h","d119i","d119j","d119k","d119l","d119m",
+  "d119n","d119o","d119p","d119q","d119r","d119s","d119t","d119u","d119v","d119w","d119x","d119y",
+  
+  # d119xa:d119xk 
+  "d119xa","d119xb","d119xc","d119xd","d119xe","d119xf","d119xg","d119xh","d119xi","d119xj","d119xk"
+)
+```
+
+
+
+```{r}
+#Test import 
+#Importing data on Rwanda
+Rwanda_dhs <- read_dta("~/Documents/POLI Capstone/Capstone_Data/RWIR81DT/RWIR81FL.DTA")
+head(Rwanda_dhs, 10)
+nrow(Rwanda_dhs)
+str(Rwanda_dhs)
+
+#Importing data on South Africa
+South_Africa_dhs  <- read_dta("ZAOD71DT/ZADV71FL.DTA")
+head(South_Africa_dhs, 10)
+
+nrow(South_Africa_dhs)
+
+str(South_Africa_dhs)
+``` 
+
+```{r}
+#Test import 
+#Importing data on Rwanda
+Rwanda_dhs <- read_dta("~/Documents/POLI Capstone/Capstone_Data/RWIR81DT/RWIR81FL.DTA")
+head(Rwanda_dhs, 10)
+nrow(Rwanda_dhs)
+str(Rwanda_dhs)
+
+#Importing data on South Africa
+South_Africa_dhs  <- read_dta("ZAOD71DT/ZADV71FL.DTA")
+head(South_Africa_dhs, 10)
+
+nrow(South_Africa_dhs)
+
+str(South_Africa_dhs)
+```
+
+
+```{r,eval=FALSE}
+#Test Wrangling of Rwanda
+DS_RD_DHS <- Rwanda_dhs %>% 
+  select(starts_with("d")) 
+
+
+
+Missing_columns <- DS_RD_DHS %>%
+   select(d129, d130a, d130b, d130c) #Extra columns in Rwanda that don't exist in Nigeria dataset, hence we might need to ommit them. 
+
+```
+
+
+
+##Understanding the variables: 
+```{r}
+#For Ghana, This sis a code to extract the label description and columns numbers to create a table (csv file)
+
+ghana_column_data <- clean_ghana_dhs %>% #We got to ceate a new dataset that doesn't have the country variable to be able to get the labels and their respectove columns. 
+  select(-Country) 
+
+col_names <- as.list(names(ghana_column_data))
+col_labels <- colnames(ghana_column_data) %>%
+  map(~attr(ghana_column_data[[.x]], "label")) %>%
+  flatten()
+
+Ghana_column_description_2008 <- tibble(
+  col_number = unlist(col_names),
+  col_label = unlist(col_labels)
+)
+
+head(Ghana_column_description_2008)
+
+write.csv(Ghana_column_description_2008, "Ghana_column_description_2008.csv")
+
+#Checking variables name: 
+ghana_column_data_2020 <- read_dta("GHIR8CDT-2022/GHIR8CFL.DTA") %>% 
+  select(starts_with("d"))
+india_column_data_2020 <-read_dta(
+  "IAIR7EDT-2019-2021/IAIR7EFL.DTA",
+  col_select = starts_with("d")) %>% 
+  head(10)
+
+
+kenya_column_data_2022 <- read_dta("KEIR8CDT-2022/KEIR8CFL.DTA") %>% select(starts_with("d"))
+
+# col_names <- as.list(ghana_column_data_2020)
+# col_labels <- colnames(ghana_column_data_2020) %>%
+#   map(~attr(ghana_column_data_2020[[.x]], "label")) %>%
+#   flatten()
+# 
+# Ghana_column_description_2020 <- tibble(
+#   col_number = unlist(col_names),
+#   col_label = unlist(col_labels)
+# )
+# 
+# head(Ghana_column_description_2020)
+# 
+# write.csv(Ghana_column_description_2020, "Ghana_column_description_2020.csv")
+
+
+kenya_column_data_2014 <- read_dta("KEIR72DT-2014/KEIR72FL.DTA") %>% select(starts_with("d"))
+
+#For india This sis a code to extract the label description and columns numbers to create a table (csv file)
+
+india_column_data <- clean_india_dhs %>% #We got to ceate a new dataset that doesn't have the country variable to be able to get the labels and their respectove columns. 
+  select(-Country) 
+
+col_names <- as.list(names(india_column_data))
+col_labels <- colnames(india_column_data) %>%
+  map(~attr(india_column_data[[.x]], "label")) %>%
+  flatten()
+
+India_column_description <- tibble(
+  col_number = unlist(col_names),
+  col_label = unlist(col_labels)
+)
+
+head(India_column_description)
+
+write.csv(India_column_description, "India_column_description")
+
+#For Nigeria This sis a code to extract the label description and columns numbers to create a table (csv file)
+
+nigeria_column_data <- clean_nigeria_dhs %>% #We got to ceate a new dataset that doesn't have the country variable to be able to get the labels and their respectove columns. 
+  select(-Country) 
+
+
+col_names <- as.list(names(nigeria_column_data))
+col_labels <- colnames(nigeria_column_data) %>%
+  map(~attr(nigeria_column_data[[.x]], "label")) %>%
+  flatten()
+
+Nigeria_column_description <- tibble(
+  col_number = unlist(col_names),
+  col_label = unlist(col_labels)
+)
+
+head(Nigeria_column_description)
+
+write.csv(Nigeria_column_description, "Nigeria_column_description")
+```
+
+
+
+/
+/
+/
+/
+
+```{r, eval = FALSE}
+# #Wrangling of Ghana 2008
+# clean_ghana_dhs <- ghana_dhs %>% 
+#   #select(caseid, v012, v020, v155,v156,v106,v107,v133, v149, v190, v191, v025,v024,v102,v137, starts_with("d")) %>% 
+#   select(all_of(cols_needed)) %>%
+#   mutate(Country = "Ghana")
+# head(clean_ghana_dhs)
+# dim(clean_ghana_dhs)
+# 
+# #Wrangling of India data 2005-2006
+# clean_india_dhs <- india_dhs %>% 
+#   #select(caseid, v012, v020, v155,v156,v106,v107,v133, v149, v190, v191, v025,v024,v102,v137, starts_with("d")) %>% 
+#   #select(-d005s) %>% 
+#   select(all_of(cols_needed)) %>%
+#   mutate(Country = "India")
+# head(clean_india_dhs)
+# dim(clean_india_dhs)
+# 
+# #Wrangling of Nigeria 2008
+# clean_nigeria_dhs <- nigeria_dhs %>% 
+#   select(caseid, v012, v020, v155,v156,v106,v107,v133, v149, v190, v191, v025,v024,v102,v137, starts_with("d")) %>% 
+#   select(all_of(cols_needed)) %>%
+#    mutate(Country = "Nigeria")
+# head(clean_nigeria_dhs)
+# dim(clean_nigeria_dhs)
+# 
+# #str(DS_SA_DHS)
+```
+
+
+```{r}
+
+# #Wrangling of Ghana 2008
+# ghana_2008 <- ghana_dhs %>% 
+#   select(all_of(cols_needed)) %>%
+#   mutate(Country = "Ghana", Year = 2008)
+# 
+# 
+# #Wrangling of India data 2005-2006
+# india_2005 <- india_dhs %>% 
+#   select(all_of(cols_needed)) %>%
+#   mutate(Country = "India", Year = 2005)
+# 
+# #Wrangling of Nigeria 2008
+# nigeria_2008 <- nigeria_dhs %>% 
+#   select(all_of(cols_needed)) %>%
+#   mutate(Country = "Nigeria", Year = 2008)
+
+```
+
+```{r, eval = FALSE}
+# #Data wrangling Combining 3 surveys taken at different years all together (adding more years) 
+# #Ghana: 
+# allyears_ghana <-  bind_rows( clean_ghana_dhs, ghana_2014 , ghana_2022)
+# 
+# #India, 
+# allyears_india <- bind_rows(clean_india_dhs, india_2015, india_2020 )
+# 
+# 
+# #Nigeria 
+# all_years_nigeria <- bind_rows(clean_nigeria_dhs, nigeria_2013, nigeria_2018, nigeria_2024)
+# 
+# 
+# #Kenya 
+# all_years_kenya <- bind_rows(kenya_2008, kenya_2014, kenya_2022)
+
+```
+
+```{r, eval = FALSE}
+# #Identifying the missing column in the 3 datasets?
+# setdiff(names(clean_india_dhs), names(clean_ghana_dhs))
+# setdiff(names(clean_india_dhs), names(clean_nigeria_dhs))
+# 
+# #The extra column is d005s, that is in india but not in the other. , which is national domestic violence weight (6 decimals). Which how is this measured? sampling weight that adjusts for the survey design and response patterns (probability that a women was selected for the survey)
+```
+
+```{r, eval=FALSE}
+# extra_variable <- clean_india_dhs %>% 
+#   select(d005s)
+# 
+# extra_variable #Which is the state domestic Violence weight. So we just removed it. 
+
+```
+
+```{r, eval = FALSE}
+Test Merging the data:
+Rwanda_DS_RD_DHS <- DS_RD_DHS %>%
+  mutate(Country = "Rwanda")
+
+Nigeria_DS_RD_DHS <- DS_NG_DHS %>%
+  mutate(Country = "Nigeria")
+
+Rwanda_and_Nigeria <- bind_rows(Rwanda_DS_RD_DHS, Nigeria_DS_RD_DHS) #You can add all 3 datasets together, separating them with a comma. 
+
+```
+
+```{r}
+#Creation of GBV dummy variable
+GBV_variable <- combined_dhs_2 %>% 
+  mutate(experienced_GBV = if_else(
+      rowSums(across(c(`Ever any emotional violence`, `Experienced any less severe violence`, `Experienced any severe violence`, `Experienced any sexual violence`, `Previous husband: ever hit, slap, kick, or physically hurt respondent`, `Previous husband/partner: physically forced to have sex or to perform sexual acts`, `Ever forced to have sex by anyone other than husband/partner in last 12 months`, `Ever forced to perform unwanted sexual acts`) ,
+                     ~ .x >= 1), na.rm = TRUE) > 0,
+      1, 0
+    )) 
+
+GBV_variable %>% 
+  count(experienced_GBV)
+
+
+GBV_variable <- combined_dhs_2 %>% 
+  mutate(experienced_GBV = if_else(
+      rowSums(across(c(d104, d105a:d105n, d110a:d110h, d115b:d115y),
+                     ~ .x >= 1), na.rm = TRUE) > 0,
+      1, 0
+    )) 
+
+GBV_variable %>% 
+  count(experienced_GBV)
+
+
+
+
+
+```
+
+
+
+```{r}
+#Creation of reporting  variable
+Data_with_reporting_variable <- combined_dhs_2 %>%
+  mutate(experienced_GBV = if_else(
+      rowSums(across(c(d104, d105a:d105n, d110a:d110h, d115b:d115y),
+                     ~ .x >= 1), na.rm = TRUE) > 0,
+      1, 0
+    )) %>% 
+  filter(experienced_GBV == 1) %>%
+  mutate(Reported_GBV = if_else(
+      rowSums(across(c(d119a:d119xk),
+                     ~ .x >= 1), na.rm = TRUE) > 0,
+      1, 0
+    ))
+
+head(Data_with_reporting_variable)
+
+Count <- Data_with_reporting_variable %>%
+  count(experienced_GBV, Reported_GBV)
+Count
+```
+
+
+
+```{r}
+summary(combined_dhs_2) 
+```
+list of variables with just NA: 
+
+d105l             d105m             d105n   d105g   
+d110c     d110f             d110g             d110h  
+  d115r             d115s             d115t     
+  d119a             d119b             d119c 
+  d119d             d119e             d119f             d119g 
+  d119l             d119m             d119n             d119o             d119p             d119q             d119r  
+  d119v             d119w
+  d119xa d119xj  d119xk    
+  
+  
+```{r, eval = FALSE}
+dim(Rwanda_DS_RD_DHS)
+dim(Nigeria_DS_RD_DHS)
+dim(Rwanda_and_Nigeria)
+
+# there are 4 columns in Rwanda data that don't appear in Nigera data
+setdiff(names(Rwanda_DS_RD_DHS), names(Nigeria_DS_RD_DHS))
+setdiff(names(Nigeria_DS_RD_DHS), names(Rwanda_DS_RD_DHS))
+
+```
+
+
+
+
+```{r,  eval = FALSE}
+#For Rwanda dataset, This sis a code to extract the label description and columns numbers to create a table (csv file)
+str(DS_RD_DHS)
+
+col_names <- as.list(names(DS_RD_DHS))
+col_labels <- colnames(DS_RD_DHS) %>%
+  map(~attr(DS_RD_DHS[[.x]], "label")) %>%
+  flatten()
+
+col_desc <- tibble(
+  col_number = unlist(col_names),
+  col_label = unlist(col_labels)
+)
+
+head(col_desc)
+
+write.csv(col_desc, "col_desc.csv")
+
+
+
+
+```
+
+
+ 
+
+
+So far: Updates: 
+This dataset is valuable, it has questions on both the violence they experienced and the reporting mechanisms. 
+Concerns small dataset, and how do I include y variables of self-reported/sought help themselves vs recorded y institution? 
+
