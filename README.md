@@ -56,7 +56,3 @@ The findings highlight the importance of looking beyond official institutional r
 This study is exploratory and does not establish that non-state actors inherently produce more accurate GBV data or that women universally feel safer reporting to them.
 
 The cross-country analysis identifies associations rather than causal relationships. The India comparison also involves surveys with different methodologies and sampling frames. Stronger causal evidence would require comparable surveys administered to the same population under controlled conditions.
-
----
-
-*Note: This repository should include only code, figures, and data that you have permission to share. The full research paper, restricted survey microdata, and any confidential research materials should not be uploaded without authorization.*
